@@ -89,8 +89,10 @@
 
 ## Blockers and Resolutions
 - Blocker: SQLite DB file lock on Windows during temporary-directory cleanup in integration test.
+- Blocker: GitHub push authentication failed (`Invalid username or token`) and `gh` CLI is not installed in this environment.
 - Resolution log:
   - 2026-02-12: Repo had no starter files; created full initial implementation scaffold from scratch.
   - 2026-02-12: Added explicit connection lifecycle management in `reddit_ideas/storage.py` so each DB call closes handles deterministically.
   - 2026-02-12: Added `test-email` CLI probe to validate SMTP credentials without running a full Reddit scan.
   - 2026-02-13: Needed deterministic timestamps for incremental-run tests; resolved by honoring injected `now` for both start and finish timestamps in pipeline tests.
+  - 2026-02-13: Initialized local git repo, added `.gitignore` rule for `config.toml`, committed code, and configured remote to `https://github.com/Bingzw/reddit-ideas-scanner.git`; pending PAT/CLI auth to complete first push.
