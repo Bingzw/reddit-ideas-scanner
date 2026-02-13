@@ -24,6 +24,8 @@ class ReportingTests(unittest.TestCase):
                 author="u1",
                 num_comments=10,
                 upvotes=50,
+                llm_profit_score=78.5,
+                llm_confidence=0.72,
             ),
             IdeaCandidate(
                 post_id="2",
@@ -53,6 +55,7 @@ class ReportingTests(unittest.TestCase):
         self.assertIn("## Subreddit Distribution", report)
         self.assertIn("r/AppIdeas: 1", report)
         self.assertIn("monetization: 1", report)
+        self.assertIn("LLM Profit Score: 78.5/100, confidence=0.72", report)
 
 
 if __name__ == "__main__":

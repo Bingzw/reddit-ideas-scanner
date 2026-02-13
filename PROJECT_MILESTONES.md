@@ -87,6 +87,33 @@
   - `python -m compileall reddit_ideas tests` passed.
   - `python -m reddit_ideas.cli --help` shows `show-runs`.
 
+## Milestone 6: Gemini LLM Profitability Enrichment
+- Status: Completed on 2026-02-13
+- Scope:
+  - Added optional Gemini-based LLM enrichment focused on profitability likelihood.
+  - Default LLM target model set to `gemini-2.5-flash-lite` (low-cost/free-tier oriented).
+  - Integrated LLM outputs into ranking, summaries, CSV exports, markdown report, and SQLite schema.
+  - Added deterministic tests for enrichment with a mocked assessor.
+- Deliverables:
+  - `reddit_ideas/llm_assessor.py`
+  - `reddit_ideas/config.py`
+  - `reddit_ideas/models.py`
+  - `reddit_ideas/pipeline.py`
+  - `reddit_ideas/storage.py`
+  - `reddit_ideas/reporting.py`
+  - `tests/test_llm_assessor.py`
+  - `tests/test_cli.py`
+  - `tests/test_extractor.py`
+  - `tests/test_pipeline.py`
+  - `tests/test_reporting.py`
+  - `.env.example`
+  - `config.toml.example`
+  - `README.md`
+- Verification:
+  - `python -m unittest discover -s tests -v` passed (10 tests).
+  - `python -m compileall reddit_ideas tests` passed.
+  - `python -m reddit_ideas.cli --config config.toml.example run-once --period daily` runs and preserves same-day skip behavior.
+
 ## Blockers and Resolutions
 - Blocker: SQLite DB file lock on Windows during temporary-directory cleanup in integration test.
 - Blocker: GitHub push authentication failed (`Invalid username or token`) and `gh` CLI is not installed in this environment.
@@ -95,4 +122,5 @@
   - 2026-02-12: Added explicit connection lifecycle management in `reddit_ideas/storage.py` so each DB call closes handles deterministically.
   - 2026-02-12: Added `test-email` CLI probe to validate SMTP credentials without running a full Reddit scan.
   - 2026-02-13: Needed deterministic timestamps for incremental-run tests; resolved by honoring injected `now` for both start and finish timestamps in pipeline tests.
-  - 2026-02-13: Initialized local git repo, added `.gitignore` rule for `config.toml`, committed code, and configured remote to `https://github.com/Bingzw/reddit-ideas-scanner.git`; pending PAT/CLI auth to complete first push.
+  - 2026-02-13: Initialized local git repo, added `.gitignore` rule for `config.toml`, and configured remote to `https://github.com/Bingzw/reddit-ideas-scanner.git`.
+  - 2026-02-13: Resolved remote history/auth push issues; merged remote `main` history and pushed successfully to GitHub.

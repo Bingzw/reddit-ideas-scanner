@@ -38,6 +38,7 @@ Default focus subreddits:
 6. Uses incremental fetching: first run pulls up to the past 7 days; later runs within 7 days pull only since the last successful run.
 7. Prevents duplicate sends: a second run on the same UTC day is skipped (no report/email).
 8. Logs every run with status/stats/errors in SQLite (`run_logs` table).
+9. Optionally enriches ranking with Gemini LLM scoring/summaries (default model target: `gemini-2.5-flash-lite`).
 
 ## Quick start
 
@@ -69,6 +70,10 @@ Outputs:
 - `output/ideas_daily_YYYYMMDD_HHMMSS.csv`
 - `output/report_daily_YYYYMMDD_HHMMSS.md`
 - `data/reddit_ideas.db`
+
+When Gemini enrichment is enabled, CSV includes:
+- `llm_profit_score`
+- `llm_confidence`
 
 ## Configuration
 
@@ -133,7 +138,17 @@ exclude_keywords = ["hiring", "looking for work", "resume review"]
 [telegram]
 # bot_token = "123456:ABCDEF..."
 # chat_id = "123456789"
+
+[gemini]
+# enabled = true
+# api_key = "your_google_ai_studio_key"
+# model = "gemini-2.5-flash-lite"
+# temperature = 0.2
+# max_candidates = 40
+# timeout_seconds = 25
 ```
+
+`gemini-2.5-flash-lite` is the default low-cost/free-tier target model for LLM assessment.
 
 ## Scheduling
 

@@ -24,6 +24,7 @@ def build_config(base_dir: Path, smtp: SmtpConfig | None) -> AppConfig:
         exclude_keywords=["hiring"],
         smtp=smtp,
         telegram=None,
+        gemini=None,
     )
 
 

@@ -75,6 +75,8 @@ class Storage:
                     author TEXT NOT NULL,
                     num_comments INTEGER NOT NULL,
                     upvotes INTEGER NOT NULL,
+                    llm_profit_score REAL,
+                    llm_confidence REAL,
                     extracted_utc INTEGER NOT NULL,
                     FOREIGN KEY (post_id) REFERENCES posts(post_id)
                 );
@@ -97,7 +99,16 @@ class Storage:
                 ON run_logs(period, run_started_utc DESC);
                 """
             )
+            self._ensure_ideas_columns(conn)
             conn.commit()
+
+    def _ensure_ideas_columns(self, conn: sqlite3.Connection) -> None:
+        rows = conn.execute("PRAGMA table_info(ideas);").fetchall()
+        existing = {row["name"] for row in rows}
+        if "llm_profit_score" not in existing:
+            conn.execute("ALTER TABLE ideas ADD COLUMN llm_profit_score REAL;")
+        if "llm_confidence" not in existing:
+            conn.execute("ALTER TABLE ideas ADD COLUMN llm_confidence REAL;")
 
     def upsert_posts(self, posts: list[RedditPost], fetched_utc: int) -> None:
         if not posts:
@@ -151,8 +162,8 @@ class Storage:
                 INSERT INTO ideas (
                     post_id, subreddit, title, problem_summary, solution_hint, relevance_score,
                     reason_tags, created_utc, permalink, url, author, num_comments, upvotes,
-                    extracted_utc
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    llm_profit_score, llm_confidence, extracted_utc
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(post_id) DO UPDATE SET
                     subreddit=excluded.subreddit,
                     title=excluded.title,
@@ -166,6 +177,8 @@ class Storage:
                     author=excluded.author,
                     num_comments=excluded.num_comments,
                     upvotes=excluded.upvotes,
+                    llm_profit_score=excluded.llm_profit_score,
+                    llm_confidence=excluded.llm_confidence,
                     extracted_utc=excluded.extracted_utc;
                 """,
                 [
@@ -183,6 +196,8 @@ class Storage:
                         idea.author,
                         idea.num_comments,
                         idea.upvotes,
+                        idea.llm_profit_score,
+                        idea.llm_confidence,
                         extracted_utc,
                     )
                     for idea in ideas
@@ -195,7 +210,8 @@ class Storage:
             rows = conn.execute(
                 """
                 SELECT post_id, subreddit, title, problem_summary, solution_hint, relevance_score,
-                       reason_tags, created_utc, permalink, url, author, num_comments, upvotes
+                       reason_tags, created_utc, permalink, url, author, num_comments, upvotes,
+                       llm_profit_score, llm_confidence
                 FROM ideas
                 WHERE created_utc >= ?
                 ORDER BY relevance_score DESC, created_utc DESC;
@@ -221,6 +237,12 @@ class Storage:
                     author=row["author"],
                     num_comments=int(row["num_comments"]),
                     upvotes=int(row["upvotes"]),
+                    llm_profit_score=float(row["llm_profit_score"])
+                    if row["llm_profit_score"] is not None
+                    else None,
+                    llm_confidence=float(row["llm_confidence"])
+                    if row["llm_confidence"] is not None
+                    else None,
                 )
             )
         return ideas

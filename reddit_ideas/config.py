@@ -66,6 +66,16 @@ class TelegramConfig:
 
 
 @dataclass(slots=True)
+class GeminiConfig:
+    enabled: bool
+    api_key: str
+    model: str
+    temperature: float
+    max_candidates: int
+    timeout_seconds: int
+
+
+@dataclass(slots=True)
 class AppConfig:
     subreddits: list[str]
     lookback_hours: int
@@ -79,6 +89,7 @@ class AppConfig:
     exclude_keywords: list[str]
     smtp: SmtpConfig | None
     telegram: TelegramConfig | None
+    gemini: GeminiConfig | None
 
 
 def _csv_to_list(value: str | list[str] | None, default: list[str]) -> list[str]:
@@ -107,6 +118,25 @@ def _float_env(name: str, fallback: float) -> float:
         return float(raw)
     except ValueError:
         return fallback
+
+
+def _bool_env(name: str, fallback: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return fallback
+    return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _bool_value(value: object, fallback: bool) -> bool:
+    if value is None:
+        return fallback
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    if isinstance(value, int):
+        return value != 0
+    return fallback
 
 
 def _read_toml(path: Path) -> dict:
@@ -167,6 +197,34 @@ def load_config(config_path: Path | None = None) -> AppConfig:
     if tg_token and tg_chat_id:
         telegram = TelegramConfig(bot_token=tg_token, chat_id=tg_chat_id)
 
+    gemini: GeminiConfig | None = None
+    gemini_section = raw.get("gemini", {})
+    gemini_enabled = _bool_env(
+        "REDDIT_IDEAS_GEMINI_ENABLED", _bool_value(gemini_section.get("enabled"), False)
+    )
+    gemini_api_key = os.getenv("REDDIT_IDEAS_GEMINI_API_KEY", gemini_section.get("api_key", ""))
+    gemini_model = os.getenv(
+        "REDDIT_IDEAS_GEMINI_MODEL", gemini_section.get("model", "gemini-2.5-flash-lite")
+    )
+    gemini_temperature = _float_env(
+        "REDDIT_IDEAS_GEMINI_TEMPERATURE", float(gemini_section.get("temperature", 0.2))
+    )
+    gemini_max_candidates = _int_env(
+        "REDDIT_IDEAS_GEMINI_MAX_CANDIDATES", int(gemini_section.get("max_candidates", 40))
+    )
+    gemini_timeout_seconds = _int_env(
+        "REDDIT_IDEAS_GEMINI_TIMEOUT_SECONDS", int(gemini_section.get("timeout_seconds", 25))
+    )
+    if gemini_enabled and gemini_api_key:
+        gemini = GeminiConfig(
+            enabled=True,
+            api_key=gemini_api_key,
+            model=gemini_model,
+            temperature=gemini_temperature,
+            max_candidates=gemini_max_candidates,
+            timeout_seconds=gemini_timeout_seconds,
+        )
+
     return AppConfig(
         subreddits=subreddits,
         lookback_hours=lookback_hours,
@@ -180,4 +238,5 @@ def load_config(config_path: Path | None = None) -> AppConfig:
         exclude_keywords=exclude_keywords,
         smtp=smtp,
         telegram=telegram,
+        gemini=gemini,
     )

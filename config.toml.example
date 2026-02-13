@@ -55,3 +55,11 @@ exclude_keywords = ["hiring", "looking for work", "resume review"]
 [telegram]
 # bot_token = "123456:ABCDEF"
 # chat_id = "123456789"
+
+[gemini]
+# enabled = true
+# api_key = "your_google_ai_studio_key"
+# model = "gemini-2.5-flash-lite"
+# temperature = 0.2
+# max_candidates = 40
+# timeout_seconds = 25

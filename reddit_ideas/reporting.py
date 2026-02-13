@@ -27,6 +27,8 @@ def export_ideas_csv(ideas: list[IdeaCandidate], destination: Path) -> None:
                 "author",
                 "num_comments",
                 "upvotes",
+                "llm_profit_score",
+                "llm_confidence",
             ]
         )
         for idea in ideas:
@@ -45,6 +47,8 @@ def export_ideas_csv(ideas: list[IdeaCandidate], destination: Path) -> None:
                     idea.author,
                     idea.num_comments,
                     idea.upvotes,
+                    idea.llm_profit_score if idea.llm_profit_score is not None else "",
+                    idea.llm_confidence if idea.llm_confidence is not None else "",
                 ]
             )
 
@@ -77,6 +81,13 @@ def build_markdown_report(
             lines.append(f"Problem: {idea.problem_summary}")
             lines.append(f"Hint: {idea.solution_hint}")
             lines.append(f"Signals: {', '.join(idea.reason_tags)}")
+            if idea.llm_profit_score is not None:
+                confidence = (
+                    f", confidence={idea.llm_confidence:.2f}"
+                    if idea.llm_confidence is not None
+                    else ""
+                )
+                lines.append(f"LLM Profit Score: {idea.llm_profit_score:.1f}/100{confidence}")
             lines.append("")
 
     lines.append("## Subreddit Distribution")

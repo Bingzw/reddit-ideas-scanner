@@ -33,3 +33,5 @@ class IdeaCandidate:
     author: str
     num_comments: int
     upvotes: int
+    llm_profit_score: float | None = None
+    llm_confidence: float | None = None

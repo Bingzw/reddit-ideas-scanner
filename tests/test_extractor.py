@@ -22,6 +22,7 @@ def make_config(min_score: float = 2.0) -> AppConfig:
         exclude_keywords=["hiring"],
         smtp=None,
         telegram=None,
+        gemini=None,
     )
 
 

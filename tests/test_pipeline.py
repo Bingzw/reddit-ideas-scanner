@@ -50,6 +50,7 @@ def build_config(tmp_path: Path) -> AppConfig:
         exclude_keywords=["hiring"],
         smtp=None,
         telegram=None,
+        gemini=None,
     )
 
 

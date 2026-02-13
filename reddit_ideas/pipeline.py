@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .config import AppConfig
 from .extractor import extract_ideas
+from .llm_assessor import GeminiAssessor, enrich_ideas_with_gemini
 from .notifiers import Notifier, build_notifier
 from .reddit_client import RedditClient
 from .reporting import build_markdown_report, export_ideas_csv, write_text_report
@@ -31,6 +32,7 @@ def run_once(
     period: str = "daily",
     reddit_client: RedditClient | None = None,
     notifier: Notifier | None = None,
+    gemini_assessor: GeminiAssessor | None = None,
     now: datetime | None = None,
 ) -> RunResult:
     period = period.lower().strip()
@@ -96,6 +98,12 @@ def run_once(
 
         storage.upsert_posts(posts=posts, fetched_utc=started_utc)
         ideas = extract_ideas(posts=posts, config=config)
+        ideas = enrich_ideas_with_gemini(
+            ideas=ideas,
+            posts=posts,
+            config=config,
+            assessor=gemini_assessor,
+        )
         storage.upsert_ideas(ideas=ideas, extracted_utc=started_utc)
 
         window_ideas = storage.get_ideas_since(lookback_floor)
