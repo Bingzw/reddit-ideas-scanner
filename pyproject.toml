@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reddit-ideas-scanner"
+version = "0.1.0"
+description = "Scheduled Reddit idea scanner for passive income and practical app ideas."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Bing Wang" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+reddit-ideas = "reddit_ideas.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

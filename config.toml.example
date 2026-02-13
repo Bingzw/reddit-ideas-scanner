@@ -1,0 +1,57 @@
+subreddits = [
+  "vibecoding",
+  "AppIdeas",
+  "freelance",
+  "passive_income",
+  "AI_Agents",
+  "AgentsOfAI",
+  "AiBuilders",
+  "AIAssisted",
+  "startups",
+  "startup",
+  "Startup_Ideas",
+  "indiehackers",
+  "buildinpublic",
+  "scaleinpublic",
+  "roastmystartup",
+  "ShowMeYourSaaS",
+  "SaaS",
+  "saasbuild",
+  "SaasDevelopers",
+  "SaaSMarketing",
+  "micro_saas",
+  "microsaas",
+]
+lookback_hours = 168
+max_posts_per_subreddit = 75
+min_score = 2.0
+report_top_n = 15
+data_dir = "data"
+output_dir = "output"
+user_agent = "reddit-ideas-scanner/0.1"
+
+include_keywords = [
+  "problem",
+  "frustrat",
+  "manual",
+  "automate",
+  "workflow",
+  "tool",
+  "app",
+  "website",
+  "side hustle",
+  "passive income",
+]
+
+exclude_keywords = ["hiring", "looking for work", "resume review"]
+
+[smtp]
+# host = "smtp.gmail.com"
+# port = 587
+# user = "you@example.com"
+# password = "app-password"
+# email_to = "you@example.com"
+
+[telegram]
+# bot_token = "123456:ABCDEF"
+# chat_id = "123456789"
