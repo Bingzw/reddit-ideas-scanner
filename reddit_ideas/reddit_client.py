@@ -8,6 +8,12 @@ import urllib.request
 
 from .models import RedditPost
 
+REDDIT_NEW_ENDPOINTS = (
+    "https://www.reddit.com/r/{sub}/new.json",
+    "https://api.reddit.com/r/{sub}/new",
+    "https://old.reddit.com/r/{sub}/new.json",
+)
+
 
 class RedditClient:
     def __init__(self, user_agent: str, timeout_seconds: int = 20, max_retries: int = 3) -> None:
@@ -21,9 +27,21 @@ class RedditClient:
     def fetch_new_posts_since(
         self, subreddit: str, since_utc: int, max_posts: int
     ) -> list[RedditPost]:
-        endpoint = "https://www.reddit.com/r/{sub}/new.json".format(
-            sub=urllib.parse.quote(subreddit)
-        )
+        endpoint_errors: list[str] = []
+        encoded_subreddit = urllib.parse.quote(subreddit)
+        for endpoint_template in REDDIT_NEW_ENDPOINTS:
+            endpoint = endpoint_template.format(sub=encoded_subreddit)
+            try:
+                return self._fetch_from_endpoint(endpoint, subreddit, since_utc, max_posts)
+            except RuntimeError as exc:
+                endpoint_errors.append(str(exc))
+
+        summary = " | ".join(endpoint_errors[-3:])
+        raise RuntimeError(f"All Reddit endpoints failed for r/{subreddit}: {summary}")
+
+    def _fetch_from_endpoint(
+        self, endpoint: str, subreddit: str, since_utc: int, max_posts: int
+    ) -> list[RedditPost]:
         normalized_max = max(max_posts, 1)
         posts: list[RedditPost] = []
         after: str | None = None
@@ -84,16 +102,31 @@ class RedditClient:
         last_error: Exception | None = None
         for attempt in range(1, self.max_retries + 1):
             request = urllib.request.Request(
-                url=url, headers={"User-Agent": self.user_agent, "Accept": "application/json"}
+                url=url,
+                headers={
+                    "User-Agent": self.user_agent,
+                    "Accept": "application/json",
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
             )
             try:
                 with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
                     raw = response.read().decode("utf-8")
                     return json.loads(raw)
-            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            except urllib.error.HTTPError as exc:
+                hint = ""
+                if exc.code == 403:
+                    hint = (
+                        " (blocked by endpoint; try a more specific User-Agent like "
+                        "'windows:reddit_ideas_scanner:1.0 (by /u/<yourname>)')"
+                    )
+                last_error = RuntimeError(f"HTTP {exc.code} for {url}{hint}")
+                if attempt < self.max_retries:
+                    time.sleep(1.5 * attempt)
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
                 last_error = exc
                 if attempt < self.max_retries:
                     time.sleep(1.5 * attempt)
         if last_error is None:
             raise RuntimeError("Failed to fetch URL: unknown error")
-        raise RuntimeError(f"Failed to fetch URL: {url}") from last_error
+        raise RuntimeError(f"Failed to fetch URL: {url}. Cause: {last_error}") from last_error
