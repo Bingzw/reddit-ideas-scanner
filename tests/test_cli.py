@@ -29,6 +29,33 @@ def build_config(base_dir: Path, smtp: SmtpConfig | None) -> AppConfig:
 
 
 class CliTests(unittest.TestCase):
+    def test_run_once_passes_force_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config = build_config(Path(tmpdir), smtp=None)
+            with patch("reddit_ideas.cli.load_config", return_value=config):
+                with patch("reddit_ideas.cli.run_once") as run_once_mock:
+                    run_once_mock.return_value = type(
+                        "Result",
+                        (),
+                        {
+                            "status": "success",
+                            "fetched_posts": 0,
+                            "extracted_ideas": 0,
+                            "window_ideas": 0,
+                            "email_sent": False,
+                            "message": "ok",
+                            "csv_path": None,
+                            "report_path": None,
+                        },
+                    )()
+                    rc = main(["run-once", "--period", "daily", "--force"])
+
+            self.assertEqual(rc, 0)
+            self.assertTrue(run_once_mock.called)
+            kwargs = run_once_mock.call_args.kwargs
+            self.assertEqual(kwargs["period"], "daily")
+            self.assertTrue(kwargs["force"])
+
     def test_test_email_requires_smtp(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             config = build_config(Path(tmpdir), smtp=None)

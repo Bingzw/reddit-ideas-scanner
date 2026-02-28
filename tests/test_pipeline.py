@@ -156,6 +156,59 @@ class PipelineTests(unittest.TestCase):
             self.assertIsNone(second.report_path)
             self.assertEqual(len(fake_notifier.calls), 1)
 
+    def test_force_run_bypasses_same_day_skip(self) -> None:
+        now = datetime(2026, 2, 12, 12, 0, tzinfo=UTC)
+        recent_utc = int(now.timestamp()) - 3600
+        posts = {
+            "vibecoding": [
+                RedditPost(
+                    post_id="x1",
+                    subreddit="vibecoding",
+                    title="Tool idea to automate bug triage workflow",
+                    selftext="This manual process is frustrating and slow.",
+                    permalink="https://reddit.com/r/vibecoding/x1",
+                    url="https://reddit.com/r/vibecoding/x1",
+                    author="u1",
+                    created_utc=recent_utc,
+                    num_comments=12,
+                    upvotes=40,
+                    is_self=True,
+                )
+            ],
+            "AppIdeas": [],
+            "freelance": [],
+            "passive_income": [],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            config = build_config(tmp_path)
+            fake_client = FakeRedditClient(posts)
+            fake_notifier = FakeNotifier()
+
+            first = run_once(
+                config=config,
+                period="daily",
+                reddit_client=fake_client,
+                notifier=fake_notifier,
+                now=now,
+            )
+            second = run_once(
+                config=config,
+                period="daily",
+                reddit_client=fake_client,
+                notifier=fake_notifier,
+                force=True,
+                now=now,
+            )
+
+            self.assertEqual(first.status, "success")
+            self.assertEqual(second.status, "success")
+            self.assertIsNotNone(second.csv_path)
+            self.assertIsNotNone(second.report_path)
+            self.assertIn("forced re-run", second.message)
+            self.assertEqual(len(fake_notifier.calls), 2)
+
     def test_second_run_within_7_days_uses_last_success_time(self) -> None:
         first_run_time = datetime(2026, 2, 1, 12, 0, tzinfo=UTC)
         second_run_time = datetime(2026, 2, 2, 12, 0, tzinfo=UTC)

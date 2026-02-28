@@ -33,6 +33,7 @@ def run_once(
     reddit_client: RedditClient | None = None,
     notifier: Notifier | None = None,
     gemini_assessor: GeminiAssessor | None = None,
+    force: bool = False,
     now: datetime | None = None,
 ) -> RunResult:
     period = period.lower().strip()
@@ -50,7 +51,7 @@ def run_once(
     storage = Storage(config.data_dir / "reddit_ideas.db")
     run_id = storage.start_run(period=period, run_day_utc=run_day_utc, run_started_utc=started_utc)
 
-    if storage.has_successful_run_on_day(period=period, run_day_utc=run_day_utc):
+    if (not force) and storage.has_successful_run_on_day(period=period, run_day_utc=run_day_utc):
         finished_utc = int((now or datetime.now(tz=UTC)).timestamp())
         message = f"Skipped duplicate {period} run for UTC day {run_day_utc}."
         storage.finish_run(
@@ -76,12 +77,13 @@ def run_once(
             message=message,
         )
 
-    latest_success = storage.get_latest_successful_run(period=period)
     lookback_floor = default_lookback_floor
-    if latest_success and latest_success.run_finished_utc is not None:
-        seconds_since_last_success = started_utc - latest_success.run_finished_utc
-        if seconds_since_last_success <= lookback_seconds:
-            lookback_floor = latest_success.run_finished_utc
+    if not force:
+        latest_success = storage.get_latest_successful_run(period=period)
+        if latest_success and latest_success.run_finished_utc is not None:
+            seconds_since_last_success = started_utc - latest_success.run_finished_utc
+            if seconds_since_last_success <= lookback_seconds:
+                lookback_floor = latest_success.run_finished_utc
 
     client = reddit_client or RedditClient(user_agent=config.user_agent)
     email_sent = False
@@ -133,8 +135,9 @@ def run_once(
             email_sent = True
 
         finished_utc = int((now or datetime.now(tz=UTC)).timestamp())
+        mode_text = "forced re-run" if force else "incremental run"
         message = (
-            "Success. Lookback started at "
+            f"Success ({mode_text}). Lookback started at "
             + datetime.fromtimestamp(lookback_floor, tz=UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
         )
         storage.finish_run(

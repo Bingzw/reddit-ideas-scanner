@@ -28,6 +28,11 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument(
         "--period", choices=["daily", "weekly"], default="daily", help="Report window."
     )
+    run_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Bypass same-day dedupe and reprocess full lookback window for this period.",
+    )
 
     email_parser = subparsers.add_parser(
         "test-email", help="Send a test email using configured SMTP settings."
@@ -59,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     config = load_config(config_path=args.config)
 
     if args.command == "run-once":
-        result = run_once(config=config, period=args.period)
+        result = run_once(config=config, period=args.period, force=args.force)
         print(f"Run status: {result.status}")
         print(
             f"Stats: fetched_posts={result.fetched_posts}, "

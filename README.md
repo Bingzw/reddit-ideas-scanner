@@ -54,6 +54,12 @@ Run once:
 python -m reddit_ideas.cli run-once --period daily
 ```
 
+Force re-run (bypass same-day dedupe and reprocess full lookback window):
+
+```powershell
+python -m reddit_ideas.cli run-once --period daily --force
+```
+
 Send SMTP test email:
 
 ```powershell
