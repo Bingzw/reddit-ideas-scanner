@@ -35,7 +35,10 @@ class GeminiAssessor:
                 "responseMimeType": "application/json",
             },
         }
-        response = self._generate_content(payload)
+        try:
+            response = self._generate_content(payload)
+        except RuntimeError:
+            return None
         content_text = _extract_response_text(response)
         if not content_text:
             return None
@@ -93,7 +96,7 @@ class GeminiAssessor:
         raise RuntimeError("Gemini request failed.") from last_error
 
 
-_INTER_CALL_DELAY_SECONDS = 4.5  # stays safely under 15 req/min free-tier limit
+_INTER_CALL_DELAY_SECONDS = 6.5  # stays safely under 10 req/min free-tier limit
 
 
 def enrich_ideas_with_gemini(
@@ -111,7 +114,11 @@ def enrich_ideas_with_gemini(
     target_ideas = sorted_ideas[:assess_limit]
 
     effective_assessor = assessor or GeminiAssessor(config=config.gemini)
+    consecutive_failures = 0
     for idx, idea in enumerate(target_ideas):
+        if consecutive_failures >= 3:
+            # Circuit breaker: quota exhausted or API down — skip remaining calls
+            break
         if idx > 0:
             time.sleep(_INTER_CALL_DELAY_SECONDS)
         post = post_by_id.get(idea.post_id)
@@ -119,7 +126,9 @@ def enrich_ideas_with_gemini(
             continue
         assessment = effective_assessor.assess(post=post, idea=idea)
         if assessment is None:
+            consecutive_failures += 1
             continue
+        consecutive_failures = 0
 
         if assessment.summary:
             idea.problem_summary = assessment.summary

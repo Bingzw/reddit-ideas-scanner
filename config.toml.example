@@ -61,5 +61,5 @@ exclude_keywords = ["hiring", "looking for work", "resume review"]
 # api_key = "your_google_ai_studio_key"
 # model = "gemini-2.5-flash-lite"
 # temperature = 0.2
-# max_candidates = 40
+# max_candidates = 15   # free tier: 20 RPD, keep ≤15 to leave buffer for retries
 # timeout_seconds = 25
