@@ -1,3 +1,9 @@
+"""Heuristic scoring and idea extraction from raw Reddit posts.
+
+Each post is scored against keyword lists, pain/solution/monetization signals,
+and engagement metrics. Posts that exceed ``config.min_score`` become
+``IdeaCandidate`` objects ready for optional LLM enrichment.
+"""
 from __future__ import annotations
 
 import math
@@ -9,8 +15,11 @@ from .models import IdeaCandidate, RedditPost
 
 WORD_RE = re.compile(r"[a-zA-Z_][a-zA-Z0-9_+-]*")
 
+# Substring patterns that indicate a user is describing a real problem
 PAIN_SIGNALS = ["problem", "issue", "frustrat", "pain", "manual", "slow", "time-consuming", "stuck"]
+# Patterns suggesting someone is looking for or building a solution
 SOLUTION_SIGNALS = ["automate", "tool", "app", "website", "script", "plugin", "bot", "saas"]
+# Patterns that indicate direct monetization interest
 MONETIZATION_SIGNALS = ["passive income", "subscription", "monetiz", "affiliate", "mrr", "side hustle"]
 
 
@@ -46,11 +55,13 @@ def score_post(post: RedditPost, config: AppConfig) -> tuple[float, list[str]]:
     tags: list[str] = []
     score = 0.0
 
+    # Keyword relevance: +0.45 per hit, capped at 3.0 to avoid keyword-stuffed posts
     include_hits = _keyword_hits(text, config.include_keywords)
     if include_hits:
         score += min(include_hits * 0.45, 3.0)
         tags.append("keyword_match")
 
+    # Noise penalty: -0.9 per hit, capped at 2.5
     exclude_hits = _keyword_hits(text, config.exclude_keywords)
     if exclude_hits:
         score -= min(exclude_hits * 0.9, 2.5)
@@ -63,17 +74,18 @@ def score_post(post: RedditPost, config: AppConfig) -> tuple[float, list[str]]:
         score += 0.9
         tags.append("solution_possible")
     if _contains_any(text, MONETIZATION_SIGNALS):
-        score += 1.1
+        score += 1.1  # Weighted higher: explicit monetization intent is a strong signal
         tags.append("monetization")
 
+    # Engagement signals: log-scaled so viral posts don't dominate
     score += min(math.log10(max(post.num_comments, 1)), 1.0) * 0.5
     score += min(math.log10(max(post.upvotes, 1)), 2.0) * 0.35
 
     title_tokens = _tokenize(post.title)
     if len(title_tokens) >= 6:
-        score += 0.2
+        score += 0.2  # Longer titles tend to be more descriptive and specific
     if "?" in post.title:
-        score += 0.25
+        score += 0.25  # Questions often indicate genuine community discussion
         tags.append("question")
 
     if "discussion" in text or "idea" in text or "feedback" in text:

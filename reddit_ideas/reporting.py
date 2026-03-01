@@ -1,3 +1,10 @@
+"""Report generation: CSV export and Markdown digest.
+
+``export_ideas_csv`` writes all ideas in the lookback window to a flat file
+suitable for spreadsheet analysis.  ``build_markdown_report`` produces a
+human-readable digest with ranked opportunities, subreddit distribution, and
+signal-tag frequency — formatted for email attachment or direct reading.
+"""
 from __future__ import annotations
 
 import csv

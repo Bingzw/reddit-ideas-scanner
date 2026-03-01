@@ -1,3 +1,9 @@
+"""Reddit ingestion using public JSON endpoints (no OAuth required).
+
+Uses three endpoint templates in order; if one returns an error the next is
+tried automatically.  Pagination is handled via Reddit's ``after`` cursor so
+up to ``max_posts`` posts can be collected per subreddit per run.
+"""
 from __future__ import annotations
 
 import json
@@ -8,6 +14,7 @@ import urllib.request
 
 from .models import RedditPost
 
+# Tried in order; old.reddit.com is a fallback that sometimes bypasses 403s
 REDDIT_NEW_ENDPOINTS = (
     "https://www.reddit.com/r/{sub}/new.json",
     "https://api.reddit.com/r/{sub}/new",
@@ -49,11 +56,11 @@ class RedditClient:
 
         while len(posts) < normalized_max and not stop:
             query_params: dict[str, int | str] = {
-                "limit": min(normalized_max - len(posts), 100),
+                "limit": min(normalized_max - len(posts), 100),  # Reddit max per page is 100
                 "raw_json": 1,
             }
             if after:
-                query_params["after"] = after
+                query_params["after"] = after  # Pagination cursor from previous page
             query = urllib.parse.urlencode(query_params)
             url = f"{endpoint}?{query}"
 
@@ -67,6 +74,7 @@ class RedditClient:
                 if post is None:
                     continue
                 if post.created_utc < since_utc:
+                    # Posts are sorted newest-first; once we pass the floor we can stop
                     stop = True
                     break
                 posts.append(post)

@@ -1,3 +1,12 @@
+"""SQLite persistence layer for posts, ideas, and run logs.
+
+Schema notes:
+- ``posts`` stores raw Reddit data; upvotes/comments are updated on re-fetch.
+- ``ideas`` stores heuristic + LLM scores; upserted each run so scores stay fresh.
+- ``run_logs`` records every pipeline execution for idempotency checks and debugging.
+- ``_ensure_ideas_columns`` handles forward-compatible schema migration (adds LLM
+  columns to existing databases without requiring a full schema rebuild).
+"""
 from __future__ import annotations
 
 import sqlite3

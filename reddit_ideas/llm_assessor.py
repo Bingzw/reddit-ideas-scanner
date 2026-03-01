@@ -1,3 +1,14 @@
+"""Gemini LLM enrichment for heuristically-scored ideas.
+
+Sends the top-N ideas to the Gemini API and replaces their heuristic scores
+with a profitability-oriented assessment.  Designed for the free tier:
+
+- Free-tier limits (gemini-2.5-flash-lite): 10 RPM, 20 RPD, 250K TPM
+- ``_INTER_CALL_DELAY_SECONDS`` enforces the RPM budget between calls
+- ``max_candidates`` in config caps the total daily spend
+- A circuit breaker aborts further calls after 3 consecutive failures so a
+  quota-exhausted run still completes and sends email with heuristic scores
+"""
 from __future__ import annotations
 
 import json
@@ -137,6 +148,7 @@ def enrich_ideas_with_gemini(
 
         idea.llm_profit_score = round(assessment.profit_score, 2)
         idea.llm_confidence = round(assessment.confidence, 3)
+        # Blend: LLM profit score dominates (65%) over the heuristic score (35%)
         idea.relevance_score = round(
             (idea.relevance_score * 0.35) + ((assessment.profit_score / 10.0) * 0.65), 3
         )

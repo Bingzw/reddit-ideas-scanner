@@ -1,3 +1,10 @@
+"""Notification adapters for delivering the weekly/daily report.
+
+``Notifier`` is a structural Protocol so any object with a matching ``send``
+signature works without inheriting from a base class.  ``build_notifier``
+reads the app config and wires up whichever channels are configured; if
+neither SMTP nor Telegram is set the pipeline simply skips notification.
+"""
 from __future__ import annotations
 
 import json

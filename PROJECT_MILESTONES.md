@@ -114,6 +114,37 @@
   - `python -m compileall reddit_ideas tests` passed.
   - `python -m reddit_ideas.cli --config config.toml.example run-once --period daily` runs and preserves same-day skip behavior.
 
+## Milestone 7: Gemini Rate-Limit Fixes + Pipeline Resilience
+- Status: Completed on 2026-02-28
+- Scope:
+  - Diagnosed that all LLM enrichment runs had failed silently since Milestone 6:
+    0 of 1,534 stored ideas had ever received an LLM score.
+  - Root cause: 40 back-to-back Gemini calls with no throttle exceeded the free-tier
+    limit of 10 RPM and 20 RPD, causing HTTP 429 errors on ~call 15.
+  - The 1.2s retry backoff was far too short to recover from a per-minute rate limit.
+  - Added inter-call delay of 6.5s (60s ÷ 10 RPM + buffer) between consecutive calls.
+  - Added explicit HTTP 429 handling with a 60s wait-and-retry instead of generic backoff.
+  - Reduced `max_candidates` from 40 to 15 to stay within the 20 RPD daily quota.
+  - Made `assess()` return `None` on error rather than raising, so one bad call
+    no longer crashes the entire pipeline.
+  - Added a circuit breaker: after 3 consecutive LLM failures the enrichment phase
+    is skipped and the pipeline continues with heuristic scores only.
+  - Added module-level docstrings and inline comments to all core modules.
+- Deliverables:
+  - `reddit_ideas/llm_assessor.py`
+  - `reddit_ideas/extractor.py`
+  - `reddit_ideas/pipeline.py`
+  - `reddit_ideas/reddit_client.py`
+  - `reddit_ideas/storage.py`
+  - `reddit_ideas/notifiers.py`
+  - `reddit_ideas/reporting.py`
+  - `config.toml.example`
+  - `PROJECT_MILESTONES.md`
+- Verification:
+  - `python -m pytest tests/test_llm_assessor.py -v` passed (1 test).
+  - Live weekly run completed successfully:
+    - `fetched_posts=1414, extracted_ideas=670, window_ideas=1052, email_sent=True`
+
 ## Blockers and Resolutions
 - Blocker: SQLite DB file lock on Windows during temporary-directory cleanup in integration test.
 - Blocker: GitHub push authentication failed (`Invalid username or token`) and `gh` CLI is not installed in this environment.

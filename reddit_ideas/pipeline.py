@@ -1,3 +1,17 @@
+"""Main pipeline orchestration: fetch → score → enrich → store → report → notify.
+
+Run flow:
+1. Same-day idempotency check — skip if a successful run already exists today
+   (bypass with ``force=True``).
+2. Determine the lookback window: first run uses the full ``lookback_hours``
+   window; subsequent runs fetch only since the last successful run finish time.
+3. Fetch posts from every configured subreddit and apply heuristic scoring.
+4. Optionally enrich the top-N ideas with Gemini LLM profit scores.
+5. Upsert posts and ideas to SQLite (scores are refreshed on every run).
+6. Export CSV + Markdown report from the full lookback window.
+7. Send email/Telegram notification with the report attached.
+8. Record run outcome in ``run_logs``.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
