@@ -118,6 +118,54 @@ def build_markdown_report(
     return "\n".join(lines)
 
 
+def build_email_body(
+    ideas: list[IdeaCandidate],
+    period: str,
+    generated_at: datetime,
+    top_n: int,
+    fetched_posts: int,
+    lookback_floor: int,
+    report_filename: str,
+) -> str:
+    """Plain-text email body with top ideas inline — readable without opening the attachment."""
+    top_ideas = ideas[: max(top_n, 1)]
+    since_str = datetime.fromtimestamp(lookback_floor, tz=UTC).strftime("%Y-%m-%d %H:%M UTC")
+    generated_str = generated_at.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
+
+    lines: list[str] = []
+    lines.append(f"Reddit Ideas {period.title()} Report")
+    lines.append("=" * 40)
+    lines.append(f"Generated : {generated_str}")
+    lines.append(f"Since     : {since_str}")
+    lines.append(f"Posts checked : {fetched_posts}")
+    lines.append(f"Ideas in window : {len(ideas)}")
+    lines.append("")
+
+    lines.append(f"TOP {len(top_ideas)} OPPORTUNITIES")
+    lines.append("-" * 40)
+    lines.append("")
+
+    for index, idea in enumerate(top_ideas, start=1):
+        created_at = datetime.fromtimestamp(idea.created_utc, tz=UTC).strftime("%Y-%m-%d")
+        lines.append(f"{index}. {idea.title}")
+        lines.append(f"   r/{idea.subreddit}  |  score={idea.relevance_score:.2f}  |  {created_at}")
+        if idea.llm_profit_score is not None:
+            confidence = (
+                f"  confidence={idea.llm_confidence:.2f}" if idea.llm_confidence is not None else ""
+            )
+            lines.append(f"   LLM profit score: {idea.llm_profit_score:.0f}/100{confidence}")
+        lines.append(f"   Problem : {idea.problem_summary}")
+        lines.append(f"   Hint    : {idea.solution_hint}")
+        lines.append(f"   Signals : {', '.join(idea.reason_tags)}")
+        lines.append(f"   Link    : {idea.permalink}")
+        lines.append("")
+
+    lines.append("-" * 40)
+    lines.append(f"Full report attached: {report_filename}")
+
+    return "\n".join(lines)
+
+
 def write_text_report(report_content: str, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(report_content, encoding="utf-8")

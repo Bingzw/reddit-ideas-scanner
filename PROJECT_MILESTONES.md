@@ -145,6 +145,24 @@
   - Live weekly run completed successfully:
     - `fetched_posts=1414, extracted_ideas=670, window_ideas=1052, email_sent=True`
 
+## Milestone 8: Improved Email Content + Top-N Increase
+- Status: Completed on 2026-02-28
+- Scope:
+  - Email body previously contained only a 4-line stats summary; the actual
+    ideas were only accessible by opening the markdown attachment.
+  - Added `build_email_body()` in `reporting.py` that renders the top-N ideas
+    inline in the email body as clean plain text (no markdown syntax): title,
+    subreddit, score, date, LLM profit score, problem summary, hint, signals,
+    and direct Reddit link for each idea.
+  - Updated `pipeline.py` to call `build_email_body()` with the full window
+    ideas list, so the email body and attachment always stay in sync.
+  - Increased `report_top_n` from 15 to 20 in config.
+- Deliverables:
+  - `reddit_ideas/reporting.py`
+  - `reddit_ideas/pipeline.py`
+  - `config.toml.example`
+  - `PROJECT_MILESTONES.md`
+
 ## Blockers and Resolutions
 - Blocker: SQLite DB file lock on Windows during temporary-directory cleanup in integration test.
 - Blocker: GitHub push authentication failed (`Invalid username or token`) and `gh` CLI is not installed in this environment.

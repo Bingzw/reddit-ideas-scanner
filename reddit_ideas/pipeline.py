@@ -23,7 +23,7 @@ from .extractor import extract_ideas
 from .llm_assessor import GeminiAssessor, enrich_ideas_with_gemini
 from .notifiers import Notifier, build_notifier
 from .reddit_client import RedditClient
-from .reporting import build_markdown_report, export_ideas_csv, write_text_report
+from .reporting import build_email_body, build_markdown_report, export_ideas_csv, write_text_report
 from .storage import Storage
 
 
@@ -135,15 +135,18 @@ def run_once(
 
         effective_notifier = notifier or build_notifier(config)
         if effective_notifier is not None:
-            summary = (
-                f"Collected ideas since {datetime.fromtimestamp(lookback_floor, tz=UTC).isoformat()}.\n"
-                f"Posts checked: {len(posts)}.\n"
-                f"Newly extracted in this run: {len(ideas)}.\n"
-                f"Report: {report_path.name}"
+            email_body = build_email_body(
+                ideas=window_ideas,
+                period=period,
+                generated_at=runtime,
+                top_n=config.report_top_n,
+                fetched_posts=len(posts),
+                lookback_floor=lookback_floor,
+                report_filename=report_path.name,
             )
             effective_notifier.send(
                 subject=f"Reddit Ideas {period.title()} Report",
-                body=summary,
+                body=email_body,
                 report_path=report_path,
             )
             email_sent = True
