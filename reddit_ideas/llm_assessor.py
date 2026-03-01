@@ -76,13 +76,24 @@ class GeminiAssessor:
             try:
                 with urllib.request.urlopen(request, timeout=self.config.timeout_seconds) as response:
                     return json.loads(response.read().decode("utf-8"))
-            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            except urllib.error.HTTPError as exc:
+                last_error = exc
+                if exc.code == 429:
+                    # Rate limited — wait 60s before retrying
+                    if attempt < self.max_retries:
+                        time.sleep(60)
+                elif attempt < self.max_retries:
+                    time.sleep(1.2 * attempt)
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
                 last_error = exc
                 if attempt < self.max_retries:
                     time.sleep(1.2 * attempt)
         if last_error is None:
             raise RuntimeError("Gemini request failed with unknown error.")
         raise RuntimeError("Gemini request failed.") from last_error
+
+
+_INTER_CALL_DELAY_SECONDS = 4.5  # stays safely under 15 req/min free-tier limit
 
 
 def enrich_ideas_with_gemini(
@@ -100,7 +111,9 @@ def enrich_ideas_with_gemini(
     target_ideas = sorted_ideas[:assess_limit]
 
     effective_assessor = assessor or GeminiAssessor(config=config.gemini)
-    for idea in target_ideas:
+    for idx, idea in enumerate(target_ideas):
+        if idx > 0:
+            time.sleep(_INTER_CALL_DELAY_SECONDS)
         post = post_by_id.get(idea.post_id)
         if post is None:
             continue
