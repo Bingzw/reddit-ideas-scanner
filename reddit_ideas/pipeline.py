@@ -29,6 +29,21 @@ from .storage import Storage
 
 @dataclass(slots=True)
 class RunResult:
+    """Structured outcome for one pipeline execution.
+
+    Attributes:
+        status: Final run status (for example ``success`` or ``failed``).
+        fetched_posts: Number of posts fetched in this execution.
+        extracted_ideas: Number of ideas produced from fetched posts.
+        window_ideas: Number of ideas included in the output window/report.
+        started_utc: Run start time as UTC epoch seconds.
+        finished_utc: Run finish time as UTC epoch seconds.
+        csv_path: Output CSV path, or None when skipped/failed before export.
+        report_path: Output markdown report path, or None when unavailable.
+        email_sent: True when at least one notifier send succeeded.
+        message: Human-readable status details.
+    """
+
     status: str
     fetched_posts: int
     extracted_ideas: int
@@ -50,6 +65,27 @@ def run_once(
     force: bool = False,
     now: datetime | None = None,
 ) -> RunResult:
+    """Execute one daily/weekly cycle and return run metadata.
+
+    The run is idempotent per UTC day unless ``force`` is set.
+
+    Args:
+        config: Fully loaded app configuration.
+        period: Report period selector (``daily`` or ``weekly``).
+        reddit_client: Optional injected Reddit client for testing/custom fetch.
+        notifier: Optional injected notifier; if None, build from config.
+        gemini_assessor: Optional injected Gemini assessor for testing/custom use.
+        force: When True, bypass same-day dedupe and full-window optimizations.
+        now: Optional timestamp override for deterministic tests.
+
+    Returns:
+        ``RunResult`` with status, counters, output paths, and message.
+
+    Raises:
+        ValueError: If ``period`` is not ``daily`` or ``weekly``.
+        Exception: Re-raises any pipeline exception after persisting run failure.
+    """
+
     period = period.lower().strip()
     if period not in {"daily", "weekly"}:
         raise ValueError("period must be either 'daily' or 'weekly'")

@@ -20,11 +20,32 @@ from .config import AppConfig
 
 
 class Notifier(Protocol):
+    """Protocol for report delivery channels.
+
+    Input:
+        subject: Notification subject line.
+        body: Notification body text.
+        report_path: Path to generated markdown report.
+
+    Output:
+        None. Implementations should raise on delivery failure.
+    """
+
     def send(self, subject: str, body: str, report_path: Path) -> None: ...
 
 
 @dataclass(slots=True)
 class EmailNotifier:
+    """SMTP notifier that sends report emails with optional attachment.
+
+    Inputs:
+        host: SMTP hostname.
+        port: SMTP port number.
+        user: SMTP username and sender email.
+        password: SMTP password or app password.
+        email_to: Recipient email address.
+    """
+
     host: str
     port: int
     user: str
@@ -32,6 +53,17 @@ class EmailNotifier:
     email_to: str
 
     def send(self, subject: str, body: str, report_path: Path) -> None:
+        """Send an email for the report.
+
+        Args:
+            subject: Subject line for the email.
+            body: Plain-text body content.
+            report_path: Markdown report file path to attach when available.
+
+        Returns:
+            None.
+        """
+
         message = EmailMessage()
         message["Subject"] = subject
         message["From"] = self.user
@@ -54,10 +86,28 @@ class EmailNotifier:
 
 @dataclass(slots=True)
 class TelegramNotifier:
+    """Telegram bot notifier for compact text summaries.
+
+    Inputs:
+        bot_token: Telegram bot token.
+        chat_id: Destination chat/channel id.
+    """
+
     bot_token: str
     chat_id: str
 
     def send(self, subject: str, body: str, report_path: Path) -> None:
+        """Send summary text to Telegram.
+
+        Args:
+            subject: Notification subject text.
+            body: Summary body text.
+            report_path: Unused in Telegram mode; kept for protocol parity.
+
+        Returns:
+            None.
+        """
+
         text = f"{subject}\n\n{body[:3500]}"
         payload = {"chat_id": self.chat_id, "text": text, "disable_web_page_preview": True}
         data = urllib.parse.urlencode(payload).encode("utf-8")
@@ -72,15 +122,51 @@ class TelegramNotifier:
 
 
 class CompositeNotifier:
+    """Fan-out notifier that forwards to all configured channels.
+
+    Input:
+        channels: Concrete notifier implementations to invoke in order.
+    """
+
     def __init__(self, channels: list[Notifier]) -> None:
+        """Store notifier channels.
+
+        Args:
+            channels: List of channels that implement ``Notifier``.
+
+        Returns:
+            None.
+        """
+
         self.channels = channels
 
     def send(self, subject: str, body: str, report_path: Path) -> None:
+        """Dispatch the same payload to each channel.
+
+        Args:
+            subject: Notification subject line.
+            body: Notification body text.
+            report_path: Generated report path.
+
+        Returns:
+            None.
+        """
+
         for channel in self.channels:
             channel.send(subject, body, report_path)
 
 
 def build_notifier(config: AppConfig) -> CompositeNotifier | None:
+    """Build notifier channels from config.
+
+    Args:
+        config: Application config with optional SMTP/Telegram sections.
+
+    Returns:
+        ``CompositeNotifier`` when at least one channel is configured,
+        otherwise None.
+    """
+
     channels: list[Notifier] = []
     if config.smtp:
         channels.append(

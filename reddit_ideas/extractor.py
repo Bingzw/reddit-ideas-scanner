@@ -24,6 +24,16 @@ MONETIZATION_SIGNALS = ["passive income", "subscription", "monetiz", "affiliate"
 
 
 def extract_ideas(posts: list[RedditPost], config: AppConfig) -> list[IdeaCandidate]:
+    """Convert posts into sorted idea candidates above the score threshold.
+
+    Args:
+        posts: Raw Reddit posts fetched from configured subreddits.
+        config: Application config containing scoring thresholds and keywords.
+
+    Returns:
+        List of ``IdeaCandidate`` objects sorted by descending relevance score.
+    """
+
     ideas: list[IdeaCandidate] = []
     for post in posts:
         score, tags = score_post(post, config)
@@ -51,6 +61,17 @@ def extract_ideas(posts: list[RedditPost], config: AppConfig) -> list[IdeaCandid
 
 
 def score_post(post: RedditPost, config: AppConfig) -> tuple[float, list[str]]:
+    """Compute heuristic relevance score and reason tags for one post.
+
+    Args:
+        post: One Reddit post to evaluate.
+        config: Application config with include/exclude keyword lists.
+
+    Returns:
+        Tuple ``(score, tags)`` where ``score`` is a float and ``tags`` is a
+        list of short strings describing why the post was scored that way.
+    """
+
     text = f"{post.title}\n{post.selftext}".lower()
     tags: list[str] = []
     score = 0.0
@@ -99,6 +120,15 @@ def score_post(post: RedditPost, config: AppConfig) -> tuple[float, list[str]]:
 
 
 def derive_problem_summary(post: RedditPost) -> str:
+    """Extract a short pain-focused summary sentence.
+
+    Args:
+        post: Source Reddit post with title/body content.
+
+    Returns:
+        A short summary string (max 220 chars) representing the problem.
+    """
+
     text = post.selftext.strip()
     if not text:
         return post.title[:220]
@@ -115,6 +145,16 @@ def derive_problem_summary(post: RedditPost) -> str:
 
 
 def derive_solution_hint(post: RedditPost, tags: list[str]) -> str:
+    """Generate a lightweight monetizable solution direction.
+
+    Args:
+        post: Source Reddit post used for context keywords.
+        tags: Heuristic tags produced by ``score_post``.
+
+    Returns:
+        A concise string with a suggested product/tool direction.
+    """
+
     text = f"{post.title}\n{post.selftext}".lower()
     if "monetization" in tags:
         return "Test a lightweight SaaS or template product with recurring pricing."
@@ -128,6 +168,15 @@ def derive_solution_hint(post: RedditPost, tags: list[str]) -> str:
 
 
 def summarize_themes(ideas: list[IdeaCandidate]) -> list[tuple[str, int]]:
+    """Aggregate reason-tag frequencies across ideas.
+
+    Args:
+        ideas: Extracted idea candidates.
+
+    Returns:
+        List of ``(tag, count)`` tuples sorted by most common first.
+    """
+
     counts = Counter()
     for idea in ideas:
         for tag in idea.reason_tags:
@@ -136,12 +185,41 @@ def summarize_themes(ideas: list[IdeaCandidate]) -> list[tuple[str, int]]:
 
 
 def _contains_any(text: str, patterns: list[str]) -> bool:
+    """Check whether any substring pattern appears in text.
+
+    Args:
+        text: Lowercased source text to scan.
+        patterns: Substring patterns to match.
+
+    Returns:
+        True if any pattern is present, otherwise False.
+    """
+
     return any(pattern in text for pattern in patterns)
 
 
 def _keyword_hits(text: str, keywords: list[str]) -> int:
+    """Count keyword matches in text.
+
+    Args:
+        text: Lowercased source text to scan.
+        keywords: Keywords from configuration.
+
+    Returns:
+        Number of keywords found in ``text``.
+    """
+
     return sum(1 for keyword in keywords if keyword.lower() in text)
 
 
 def _tokenize(text: str) -> list[str]:
+    """Tokenize text into lowercase words.
+
+    Args:
+        text: Input string to tokenize.
+
+    Returns:
+        List of lowercase token strings.
+    """
+
     return WORD_RE.findall(text.lower())
